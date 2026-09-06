@@ -77,6 +77,25 @@ adapters in `lib/scraper.ts` are transport-agnostic — swap the demo factory ca
 (e.g. Supabase Edge Function + pg-based queue) — the dashboard already consumes progress via an event stream,
 which maps 1:1 to a Supabase Realtime channel on `scrape_runs`.
 
+## Zet het op GitHub (± 2 minuten)
+
+```bash
+# 1. maak op github.com een lege repository aan (bijv. marketplace-scraper)
+# 2. in de projectmap:
+git init
+git add .
+git commit -m "Marketplace Scraper — complete web app"
+git branch -M main
+git remote add origin https://github.com/JOUW-GEBRUIKER/marketplace-scraper.git
+git push -u origin main
+```
+
+Liever geen terminal? Op GitHub: **Add file → Upload files** en sleep de projectbestanden erin
+(`node_modules` en `dist` zijn al uitgesloten via `.gitignore`; secrets in `.env` verlaten nooit je machine).
+
+Daarna live: Vercel → *Add New → Project* → importeer de zojuist gepushte repo → **Deploy**.
+Je krijgt direct een publieke URL; elke volgende `git push` deployt automatisch opnieuw.
+
 ## Ethics & compliance
 
 The engine uses conservative, configurable request delays, retries with exponential backoff, honors `HTTP 429`,

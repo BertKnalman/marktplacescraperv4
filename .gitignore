@@ -1,5 +1,29 @@
+# dependencies
 node_modules/
-.next/
+
+# build output (hosting platforms rebuild this)
 dist/
-build/
+
+# environment & secrets — never commit
+.env
+.env.local
+.env.*.local
+*.pem
+
+# logs
 *.log
+npm-debug.log*
+
+# editors & OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.tsbuildinfo
+
+# vercel / tooling caches
+.vercel/
+coverage/
+.next/
+build/
