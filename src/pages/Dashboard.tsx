@@ -29,8 +29,10 @@ export default function Dashboard() {
   const [starting, setStarting] = useState(false);
 
   const [run, setRun] = useState<RunProgress | null>(getRun());
-  const stats = useMemo(() => getStats(user!.id), [user, run?.status]);
-  const recent = useMemo(() => listSearches(user!.id).slice(0, 4), [user, run?.status]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const runStatus = run?.status ?? null;
+  const stats = useMemo(() => getStats(user!.id), [user, runStatus, refreshKey]);
+  const recent = useMemo(() => listSearches(user!.id).slice(0, 4), [user, runStatus, refreshKey]);
 
   useEffect(() => subscribeRun(setRun), []);
 
@@ -65,17 +67,22 @@ export default function Dashboard() {
       push("info", `Search started — capturing ${markets.length} source${markets.length > 1 ? "s" : ""} for “${params.query}”.`);
       const summary = await startScrape(user!, params, settings);
       if (summary.status === "completed") {
+        const failed = params.marketplaces.filter((m) => summary.by_market[m]?.status === "error");
+        if (failed.length) {
+          push("warn", `${failed.map((m) => MARKETPLACES[m].short).join(", ")} temporarily unavailable — the other sources finished.`);
+        }
         push("ok", `Search completed — ${summary.inserted} new listings (${summary.duplicates} duplicates skipped).`);
       } else if (summary.status === "cancelled") {
         push("warn", "Scrape job cancelled.");
       } else {
         push("err", "All sources reported errors — nothing was saved.");
       }
-      navigate("/listings");
     } catch (err) {
       push("err", err instanceof Error ? err.message : "Could not start the scrape job.");
     } finally {
       setStarting(false);
+      setRefreshKey((n) => n + 1);
+      navigate("/listings");
     }
   };
 
@@ -332,17 +339,17 @@ export default function Dashboard() {
           </div>
 
           {/* latest listings strip */}
-          <LatestStrip userId={user!.id} />
+          <LatestStrip userId={user!.id} refreshKey={refreshKey} runStatus={runStatus} />
         </section>
       </div>
     </div>
   );
 }
 
-function LatestStrip({ userId }: { userId: string }) {
+function LatestStrip({ userId, refreshKey, runStatus }: { userId: string; refreshKey: number; runStatus: string | null }) {
   const latest = useMemo(
     () => queryListings(userId, { sort: "newest", page: 1, per_page: 4 }).rows,
-    [userId],
+    [userId, refreshKey, runStatus],
   );
   if (latest.length === 0) return null;
   return (

@@ -35,7 +35,7 @@ interface Store {
   settings: Record<string, SettingsRow>;
 }
 
-const KEY = "mscraper.db.v1";
+const KEY = "mscraper.db.v2";
 let store: Store | null = null;
 
 function empty(): Store {

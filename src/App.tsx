@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { subscribeRun } from "./lib/engine";
 import {
-  Btn, IconChevronD, IconLogout, IconRadar, IconUser, LogoMark, Spinner, StatusDot, ToastProvider,
+  Btn, IconChevronD, IconLogout, IconRadar, IconUser, LogoMark, Spinner, StatusDot, ToastProvider, useToast,
 } from "./components/ui";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
@@ -154,9 +154,27 @@ function Footer() {
   );
 }
 
+/** Surfaces unexpected runtime errors as toasts — nothing fails silently. */
+function ErrorReporter() {
+  const { push } = useToast();
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => push("err", `Runtime error: ${e.message}`);
+    const onRejection = (e: PromiseRejectionEvent) =>
+      push("err", `Unhandled error: ${e.reason instanceof Error ? e.reason.message : String(e.reason)}`);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, [push]);
+  return null;
+}
+
 function Shell() {
   return (
     <div className="bg-stage relative flex min-h-screen flex-col">
+      <ErrorReporter />
       <div className="bg-grid pointer-events-none absolute inset-x-0 top-0 h-[620px]" aria-hidden />
       <div className="noise-overlay pointer-events-none fixed inset-0 z-[1]" aria-hidden />
       <div className="relative z-[2] flex min-h-screen flex-col">

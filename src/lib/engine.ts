@@ -75,7 +75,6 @@ function emptyStats(): Record<MarketplaceId, RunStats> {
 export function startScrape(user: UserRow, params: EngineParams, settings: SettingsRow): Promise<ScrapeSummary> {
   if (isRunning()) return Promise.reject(new Error("A scrape job is already running."));
   cancelRequested = false;
-  bindUser(user.id);
 
   const search = createSearch(user.id, params);
   const run = createRun(user.id, search.id);
@@ -109,7 +108,7 @@ export function startScrape(user: UserRow, params: EngineParams, settings: Setti
     const markets = [...params.marketplaces];
     log("info", `job ${run.id.slice(0, 8)} started · query “${params.query}” · ${markets.length} source${markets.length > 1 ? "s" : ""} · limit ${params.limit}`);
 
-    const marketJobs = markets.map((id) => runMarketplace(id, params, settings, knownKeys, log, provider.id));
+    const marketJobs = markets.map((id) => runMarketplace(user.id, id, params, settings, knownKeys, log, provider.id));
 
     // respect configured concurrency (1 = sequential, 3 = all in parallel)
     const conc = clamp(settings.concurrency, 1, 3);
@@ -160,20 +159,38 @@ export function startScrape(user: UserRow, params: EngineParams, settings: Setti
   };
 
   const summary = new Promise<ScrapeSummary>((resolve) => {
-    runJob().then(() => {
-      resolve({
-        run_id: run.id,
-        search_id: search.id,
-        inserted: current!.inserted,
-        duplicates: current!.duplicates,
-        translated: current!.translated,
-        cache_hits: current!.cache_hits,
-        errors: current!.marketplaces.reduce((acc, m) => acc + current!.stats[m].errors, 0),
-        status: current!.status,
-        duration_ms: (current!.finished_at ?? Date.now()) - startedAt,
-        by_market: { ...current!.stats },
+    runJob()
+      .catch((err) => {
+        // fail-safe: a crash must never leave the monitor stuck on "running"
+        log("err", `job crashed: ${err instanceof Error ? err.message : String(err)}`);
+        if (current && current.status === "running") {
+          current.status = "failed";
+          current.finished_at = Date.now();
+          for (const m of params.marketplaces) {
+            const st = current.stats[m];
+            if (st.status === "running" || st.status === "waiting") {
+              st.status = "error";
+              st.message = "job aborted";
+              st.progress = 1;
+            }
+          }
+          emit();
+        }
+      })
+      .then(() => {
+        resolve({
+          run_id: run.id,
+          search_id: search.id,
+          inserted: current!.inserted,
+          duplicates: current!.duplicates,
+          translated: current!.translated,
+          cache_hits: current!.cache_hits,
+          errors: current!.marketplaces.reduce((acc, m) => acc + current!.stats[m].errors, 0),
+          status: current!.status,
+          duration_ms: (current!.finished_at ?? Date.now()) - startedAt,
+          by_market: { ...current!.stats },
+        });
       });
-    });
   });
 
   emit();
@@ -181,6 +198,7 @@ export function startScrape(user: UserRow, params: EngineParams, settings: Setti
 }
 
 function runMarketplace(
+  userId: string,
   id: MarketplaceId,
   params: EngineParams,
   settings: SettingsRow,
@@ -252,7 +270,7 @@ function runMarketplace(
             map.set(hashes[i], translated);
             toStore.push({
               id: uuid(),
-              user_id: current!.search_id ? getUserIdHack() : getUserIdHack(),
+              user_id: userId,
               source_text_hash: hashes[i],
               source_text: t.text,
               source_lang: t.lang,
@@ -270,7 +288,7 @@ function runMarketplace(
         // ---- persist + dedupe ----
         const rows: Listing[] = batchRaw.map((g) => ({
           id: uuid(),
-          user_id: getUserIdHack(),
+          user_id: userId,
           marketplace: g.marketplace,
           marketplace_listing_id: g.marketplace_listing_id,
           url: g.url,
@@ -292,7 +310,7 @@ function runMarketplace(
           last_seen: now,
           scraped_at: now,
         }));
-        const { inserted, duplicates } = upsertListings(getUserIdHack(), rows, knownKeys);
+        const { inserted, duplicates } = upsertListings(userId, rows, knownKeys);
         current!.inserted += inserted;
         current!.duplicates += duplicates;
         st.processed += inserted + duplicates;
@@ -327,12 +345,4 @@ function runMarketplace(
   };
 }
 
-/** The engine is started with an authenticated user; this binding keeps the closure simple. */
-let boundUserId: string | null = null;
-export function bindUser(userId: string): void {
-  boundUserId = userId;
-}
-function getUserIdHack(): string {
-  if (!boundUserId) throw new Error("Engine not bound to an authenticated user.");
-  return boundUserId;
-}
+
