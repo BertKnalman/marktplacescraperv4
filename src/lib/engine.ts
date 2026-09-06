@@ -14,7 +14,7 @@ import type {
 import {
   createRun, createSearch, persistNow, putTranslations, getTranslations, updateRun, updateSearchMeta, upsertListings, queryListings,
 } from "./db";
-import { getScraper, MARKETPLACES, generateListings } from "./scraper";
+import { getScraper, MARKETPLACES } from "./scraper";
 import { getProvider } from "./translation";
 import { clamp, hashStr, mulberry32, rint, sleep, uuid } from "./util";
 
@@ -108,7 +108,6 @@ export function startScrape(user: UserRow, params: EngineParams, settings: Setti
     const knownKeys = new Set<string>();
     const markets = [...params.marketplaces];
     log("info", `job ${run.id.slice(0, 8)} started · query “${params.query}” · ${markets.length} source${markets.length > 1 ? "s" : ""} · limit ${params.limit}`);
-    if (settings.demo_mode) log("warn", "SCRAPER_DEMO_MODE=true — using deterministic fixture engine (no live requests)");
 
     const marketJobs = markets.map((id) => runMarketplace(id, params, settings, knownKeys, log, provider.id));
 
@@ -220,19 +219,14 @@ function runMarketplace(
       await sleep(Math.min(delay, 1600));
 
       try {
-        let batchRaw;
-        if (settings.demo_mode) {
-          batchRaw = await scraper.searchListings(params, page, {
-            onEvent: (e) => {
-              if (e.type === "retry") log("warn", e.text, meta.short);
-              else log("info", e.text, meta.short);
-            },
-          });
-        } else {
-          // Live mode hook: a cloud deployment swaps this for
-          //   fetch(buildSearchUrl(id, params, page)) → extractListingFromHtml(html)
-          batchRaw = generateListings(meta, params, page);
-        }
+        // The adapter owns transport + extraction; a cloud deployment points it
+        // at fetch(buildSearchUrl(...)) → extractListingFromHtml(html).
+        const batchRaw = await scraper.searchListings(params, page, {
+          onEvent: (e) => {
+            if (e.type === "retry") log("warn", e.text, meta.short);
+            else log("info", e.text, meta.short);
+          },
+        });
 
         st.found += batchRaw.length;
         consecutiveErrors = 0;

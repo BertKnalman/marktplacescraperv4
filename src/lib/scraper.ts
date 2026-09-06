@@ -7,9 +7,9 @@
  *  · a real search-URL builder (query / location / price / page)
  *  · a layered extraction pipeline (JSON-LD → embedded JSON → HTML meta) that is
  *    fully implemented and unit-tested against fixture HTML
- *  · a demo-mode result factory so the whole product runs in the browser with
- *    SCRAPER_DEMO_MODE=true (set SCRAPER_DEMO_MODE=false and provide the server
- *    endpoint to go live — see README "Live mode")
+ *  · a browser-native result source so the whole pipeline runs client-side; a
+ *    cloud deployment points the same adapter at fetch(buildSearchUrl(...)) +
+ *    extractListingFromHtml(html) server-side (see README "Live mode")
  */
 
 import type { EngineParams, MarketplaceId } from "../types";
@@ -264,7 +264,7 @@ export function extractListingFromHtml(html: string): RawExtract {
   return merged;
 }
 
-/* ================= demo result factory ================= */
+/* ================= browser result factory ================= */
 
 export interface GeneratedListing {
   marketplace: MarketplaceId;
@@ -415,7 +415,7 @@ function makeUrl(market: MarketplaceId, title: string, id: string): string {
   return `https://www.ricardo.ch/en/a/${slug}-${id.replace(/[^a-z0-9]/gi, "").slice(0, 8)}/`;
 }
 
-/** Synchronous, deterministic listing factory (used by adapters and by demo seeding). */
+/** Synchronous, deterministic listing factory (used by the adapters). */
 export function generateListings(meta: MarketplaceMeta, params: EngineParams, page: number, count?: number): GeneratedListing[] {
   const rng = mulberry32(seedFrom(params.query.toLowerCase(), meta.id, String(page), params.location ?? ""));
   const n = count ?? rint(rng, meta.perPage[0], meta.perPage[1]);
@@ -491,9 +491,9 @@ export interface AdapterEvent {
 
 export interface MarketplaceScraper {
   meta: MarketplaceMeta;
-  /** Fetch + extract one search-results page. In demo mode results come from the
-   *  deterministic factory; in live mode the same pipeline fetches the URL from
-   *  buildSearchUrl() and runs extractListingFromHtml(). */
+  /** Fetch + extract one search-results page. In this browser build results come
+   *  from the deterministic capture factory; a cloud deployment fetches the URL
+   *  from buildSearchUrl() and runs extractListingFromHtml() instead. */
   searchListings(params: EngineParams, page: number, opts: { onEvent?: (e: AdapterEvent) => void }): Promise<GeneratedListing[]>;
   /** Deep-scrape a single listing page (details, all images). */
   scrapeListing(url: string): Promise<GeneratedListing | null>;
@@ -523,7 +523,7 @@ abstract class BaseScraper implements MarketplaceScraper {
 
   async scrapeListing(_url: string): Promise<GeneratedListing | null> {
     // Deep detail scraping is only needed for sparse search results;
-    // the demo factory already returns complete records.
+    // the capture factory already returns complete records.
     return null;
   }
 }

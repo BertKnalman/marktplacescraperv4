@@ -121,7 +121,6 @@ export interface SettingsRow {
   concurrency: number;
   translation_provider: "local" | "deepl" | "openai";
   translation_model: string;
-  demo_mode: boolean;
 }
 
 export interface TranslationRow {

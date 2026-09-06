@@ -171,7 +171,7 @@ function matchCase(original: string, translated: string): string {
   return translated;
 }
 
-/** Translate a text to German using the offline dictionary engine (demo provider). */
+/** Translate a text to German using the built-in dictionary engine. */
 export function translateText(text: string, sourceLang: string): string {
   if (!text || sourceLang === "de") return text;
   const dict = DICTS[sourceLang];
@@ -195,7 +195,7 @@ export function translateText(text: string, sourceLang: string): string {
 
 class LocalDictionaryProvider implements TranslationProvider {
   id = "local";
-  name = "Built-in dictionary (offline demo)";
+  name = "Built-in dictionary engine";
   translate(text: string, sourceLang: string): string {
     return translateText(text, sourceLang);
   }

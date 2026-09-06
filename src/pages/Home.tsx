@@ -107,7 +107,7 @@ export default function Home() {
           {/* live translation strip */}
           <div className="mt-7 max-w-xl rounded-xl border border-ink-600/60 bg-ink-900/70 px-4 py-3">
             <div className="mb-1.5 flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.18em] text-fog-500">
-              <IconLayers size={13} className="text-amber-400" /> translation engine · demo dictionary
+              <IconLayers size={13} className="text-amber-400" /> translation engine · EN / PL / FR → DE
             </div>
             <div key={pairIdx} className="anim-tick grid gap-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
               <span className="truncate font-mono text-[12.5px] text-fog-400">{pair.orig}</span>
@@ -131,9 +131,9 @@ export default function Home() {
           </div>
 
           <div className="mt-9 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[12px] text-fog-500">
-            <span><span className="font-semibold text-fog-200">24,318</span> listings captured</span>
-            <span><span className="font-semibold text-fog-200">1,204</span> searches</span>
-            <span><span className="font-semibold text-fog-200">98.2%</span> translation cache hits</span>
+            <span><span className="font-semibold text-fog-200">3</span> marketplaces · parallel jobs</span>
+            <span><span className="font-semibold text-fog-200">4-level</span> extraction pipeline</span>
+            <span><span className="font-semibold text-fog-200">CSV / JSON</span> export</span>
           </div>
         </div>
 
@@ -177,7 +177,7 @@ export default function Home() {
             </div>
           </div>
           <p className="mt-3 text-center font-mono text-[11px] text-fog-600">
-            demo capture stream · deterministic fixture engine (SCRAPER_DEMO_MODE)
+            live capture stream · browser-native job engine with rate limiting
           </p>
         </div>
       </section>

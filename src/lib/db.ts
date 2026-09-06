@@ -12,9 +12,7 @@ import type {
   ExportRow, Listing, MarketplaceId, ScrapeRun, SearchRecord, SettingsRow,
   TranslationRow, UserRow, WorkspaceStats, EngineParams,
 } from "../types";
-import { dedupeKey, seedFrom, mulberry32, rint, uuid } from "./util";
-import { generateListings, MARKETPLACES } from "./scraper";
-import { translateText } from "./translation";
+import { dedupeKey, uuid } from "./util";
 
 interface ListingImageRow {
   id: string;
@@ -147,7 +145,6 @@ export function defaultSettings(userId: string): SettingsRow {
     concurrency: 3,
     translation_provider: "local",
     translation_model: "dictionary-v1",
-    demo_mode: true,
   };
 }
 
@@ -438,80 +435,18 @@ export function clearUserData(userId: string): void {
   persistNow();
 }
 
-/* ================= demo seeding ================= */
+/* ================= built-in admin account ================= */
 
-export const DEMO_EMAIL = "demo@marketplace-scraper.app";
-export const DEMO_PASSWORD = "demo-2026";
+export const ADMIN_EMAIL = "admin@marketplace-scraper.app";
+export const ADMIN_PASSWORD = "admin123";
 
-function seedListingsFor(userId: string, searchId: string, runId: string, params: EngineParams, createdIso: string): number {
-  const rng = mulberry32(seedFrom("seedmeta", searchId));
-  const rows: Listing[] = [];
-  const keys = new Set<string>();
-  for (const market of params.marketplaces) {
-    const meta = MARKETPLACES[market];
-    for (let page = 1; page <= Math.min(params.pages, 2); page++) {
-      const batch = generateListings(meta, params, page, rint(rng, 8, 12));
-      for (const g of batch) {
-        const tDe = translateText(g.title, g.source_lang);
-        const dDe = translateText(g.description, g.source_lang);
-        rows.push({
-          id: uuid(),
-          user_id: userId,
-          marketplace: g.marketplace,
-          marketplace_listing_id: g.marketplace_listing_id,
-          url: g.url,
-          title_original: g.title,
-          title_german: tDe,
-          description_original: g.description,
-          description_german: dDe,
-          price: g.price,
-          currency: g.currency,
-          price_original: g.price_original,
-          images: g.images,
-          location: g.location,
-          published_at: g.published_at,
-          condition: g.condition,
-          source_lang: g.source_lang,
-          search_id: searchId,
-          run_id: runId,
-          first_seen: createdIso,
-          last_seen: createdIso,
-          scraped_at: createdIso,
-        });
-      }
-    }
-  }
-  const { inserted } = upsertListings(userId, rows, keys);
-  return inserted;
-}
-
-/** Creates (or returns) the demo account with realistic seeded history. */
-export function ensureDemoAccount(passwordHash: string): UserRow {
-  const existing = findUserByEmail(DEMO_EMAIL);
+/**
+ * Creates (or returns) the built-in admin account. The admin starts with a
+ * clean workspace and captures data through the normal scraping flow, exactly
+ * like any other user.
+ */
+export function ensureAdminAccount(passwordHash: string): UserRow {
+  const existing = findUserByEmail(ADMIN_EMAIL);
   if (existing) return existing;
-  const user = createUser(DEMO_EMAIL, passwordHash, "Demo Explorer");
-
-  const seeds: Array<{ params: EngineParams; daysAgo: number }> = [
-    { params: { query: "iPhone 15 Pro", marketplaces: ["kijiji", "olx", "ricardo"], pages: 3, limit: 100 }, daysAgo: 2 },
-    { params: { query: "Sony A7 III", marketplaces: ["kijiji", "ricardo"], pages: 2, limit: 60 }, daysAgo: 6 },
-    { params: { query: "Lego Technic", marketplaces: ["olx", "ricardo"], pages: 2, limit: 60 }, daysAgo: 0.3 },
-  ];
-
-  for (const seed of seeds) {
-    const created = new Date(Date.now() - seed.daysAgo * 86400_000).toISOString();
-    const search = createSearch(user.id, seed.params);
-    search.created_at = created;
-    const run = createRun(user.id, search.id);
-    run.created_at = created;
-    run.status = "completed";
-    run.finished_at = created;
-    run.duration_ms = 9000 + Math.round(seed.daysAgo * 1337);
-    const inserted = seedListingsFor(user.id, search.id, run.id, seed.params, created);
-    run.inserted = inserted;
-    run.translated = inserted * 2;
-    run.cache_hits = Math.round(inserted * 0.31);
-    updateSearchMeta(user.id, search.id, { listing_count: inserted, last_run_status: "completed" });
-  }
-  persistNow();
-  return user;
+  return createUser(ADMIN_EMAIL, passwordHash, "Admin");
 }

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../lib/auth";
-import { Btn, Field, IconAlert, IconBolt, IconShield, IconTerminal, LogoMark, Spinner, TextInput, useToast } from "../components/ui";
+import { useAuth, ADMIN_LOGIN } from "../lib/auth";
+import { Btn, Field, IconAlert, IconBolt, IconShield, IconTerminal, IconUser, LogoMark, Spinner, TextInput, useToast } from "../components/ui";
 
 export default function Auth() {
-  const { user, login, signup, demoLogin } = useAuth();
+  const { user, login, signup } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -13,14 +13,14 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"form" | "demo" | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to="/dashboard" replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setBusy("form");
+    setBusy(true);
     try {
       if (mode === "login") {
         await login(email, password);
@@ -33,22 +33,15 @@ export default function Auth() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
-  const demo = async () => {
+  const fillAdmin = () => {
+    setMode("login");
+    setEmail(ADMIN_LOGIN.alias);
+    setPassword(ADMIN_LOGIN.password);
     setError(null);
-    setBusy("demo");
-    try {
-      await demoLogin();
-      push("ok", "Demo workspace loaded — 3 searches with captured listings.");
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start demo session.");
-    } finally {
-      setBusy(null);
-    }
   };
 
   return (
@@ -76,6 +69,28 @@ export default function Auth() {
             </li>
           ))}
         </ul>
+
+        {/* admin credentials card */}
+        <div className="mt-9 max-w-md rounded-2xl border border-amber-500/35 bg-amber-500/[0.07] p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+              <IconUser size={15} />
+            </span>
+            <div>
+              <div className="text-[13.5px] font-bold text-amber-300">Admin login</div>
+              <div className="font-mono text-[11px] text-fog-400">built-in account · ready to use</div>
+            </div>
+          </div>
+          <dl className="mt-3.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[12.5px]">
+            <dt className="text-fog-500">username</dt>
+            <dd className="text-fog-100">admin</dd>
+            <dt className="text-fog-500">password</dt>
+            <dd className="text-fog-100">admin123</dd>
+          </dl>
+          <Btn variant="outline" size="sm" className="mt-4" onClick={fillAdmin}>
+            Fill in admin credentials
+          </Btn>
+        </div>
       </div>
 
       {/* form */}
@@ -99,8 +114,8 @@ export default function Auth() {
                 <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Lovelace" autoComplete="name" />
               </Field>
             )}
-            <Field label="E-mail">
-              <TextInput type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
+            <Field label="E-mail / username">
+              <TextInput type="text" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com or admin" autoComplete="username" autoFocus />
             </Field>
             <Field label="Password" hint={mode === "signup" ? "min. 6 characters" : undefined}>
               <TextInput type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"} />
@@ -112,20 +127,28 @@ export default function Auth() {
               </div>
             )}
 
-            <Btn size="lg" className="w-full" loading={busy === "form"}>
+            <Btn size="lg" className="w-full" loading={busy}>
               {mode === "login" ? "Sign in" : "Create account"}
             </Btn>
           </form>
 
           <div className="my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-fog-600">
-            <span className="h-px flex-1 bg-ink-600/70" /> or <span className="h-px flex-1 bg-ink-600/70" />
+            <span className="h-px flex-1 bg-ink-600/70" /> admin <span className="h-px flex-1 bg-ink-600/70" />
           </div>
 
-          <Btn variant="outline" size="lg" className="w-full" onClick={demo} loading={busy === "demo"}>
-            Try the live demo workspace
-          </Btn>
+          <button
+            onClick={fillAdmin}
+            className="group flex w-full items-center justify-between rounded-xl border border-amber-500/35 bg-amber-500/[0.06] px-4 py-3 text-left transition-all duration-200 hover:border-amber-500/70 hover:bg-amber-500/[0.12]"
+          >
+            <span>
+              <span className="block text-[13px] font-bold text-amber-300">Sign in as admin</span>
+              <span className="block font-mono text-[11px] text-fog-400">admin · admin123</span>
+            </span>
+            <span className="font-mono text-[10.5px] font-bold uppercase tracking-widest text-amber-400 transition-transform duration-200 group-hover:translate-x-1">fill →</span>
+          </button>
+
           <p className="mt-3 text-center text-[12px] leading-relaxed text-fog-500">
-            Demo signs you into a seeded account with real search history, listings and translations — no registration needed.
+            The built-in admin account starts with a clean workspace — run your own captures right away.
           </p>
         </div>
         <p className="mt-4 flex items-center justify-center gap-2 text-center font-mono text-[11px] text-fog-600">

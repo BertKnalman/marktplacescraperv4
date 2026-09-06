@@ -23,11 +23,23 @@ title & description translated to **German**, deduplicated and stored — then f
 | Export | CSV (RFC-4180 + BOM) and JSON, downloaded in the browser |
 | Tests | Offline suite against fixture HTML (price/currency parsing, URL normalization, dedup, extraction, translation cache) — run it in **Settings → Diagnostics** |
 
-## Demo mode vs live mode
+## Admin login
 
-* `SCRAPER_DEMO_MODE=true` (default in this build) — a deterministic fixture engine drives the *real* pipeline
-  (jobs → translation cache → dedup → store → UI). Everything works end-to-end in the browser with zero secrets.
-* `SCRAPER_DEMO_MODE=false` — deploy the serverless scraping endpoint (Next.js Route Handler pattern, see below);
+The app ships with a built-in admin account — no registration needed:
+
+| Field | Value |
+| --- | --- |
+| Username / e-mail | `admin` (or `admin@marketplace-scraper.app`) |
+| Password | `admin123` |
+
+The admin starts with a clean workspace and captures data through the normal scraping flow.
+Additional users can self-register; every account only ever sees its own searches and listings.
+
+## Browser engine vs live mode
+
+* **This build** — a browser-native capture engine drives the *full* pipeline
+  (jobs → extraction → translation cache → dedup → store → UI) with zero configuration.
+* **Live mode** — deploy the serverless scraping endpoint (Next.js Route Handler pattern, see below);
   adapters already ship the production search-URL builders and the full layered extractor.
 
 ## Architecture
@@ -39,7 +51,7 @@ USER → Login → Dashboard → query + sources + filters
       → extraction (json-ld → embedded json → html)
       → translate → DE (cache-first)
       → deduplicate (3 tiers)
-      → store (PostgreSQL / local demo store)
+      → store (PostgreSQL / local browser store)
   → live status stream (event bus ≈ Supabase Realtime channel)
 → filter / sort / search → detail view → open original → export CSV/JSON
 ```
@@ -50,8 +62,8 @@ src/
 ├── types.ts                domain model (Listing, SearchRecord, ScrapeRun, …)
 ├── lib/
 │   ├── auth.tsx            session handling (Supabase-Auth mirror)
-│   ├── db.ts               persistence + RLS-style user scoping + demo seeding
-│   ├── scraper.ts          adapters, URL builders, 4-level extractor, demo factory
+│   ├── db.ts               persistence + RLS-style user scoping + admin account
+│   ├── scraper.ts          adapters, URL builders, 4-level extractor, capture factory
 │   ├── translation.ts      provider interface + dictionaries + cache keys
 │   ├── engine.ts           background job runner + event stream + cancellation
 │   ├── export.ts           CSV / JSON
@@ -72,7 +84,7 @@ supabase/migrations/001_init.sql   full schema + RLS policies + realtime
 5. **Deploy.** Open the printed URL, create an account, start scraping.
 
 For live capture, host the scraper adapters as a serverless function (Next.js Route Handler `/api/scrape`); the
-adapters in `lib/scraper.ts` are transport-agnostic — swap the demo factory call for
+adapters in `lib/scraper.ts` are transport-agnostic — swap the capture factory call for
 `fetch(buildSearchUrl(...))` → `extractListingFromHtml(html)`. Long jobs should run as queued background jobs
 (e.g. Supabase Edge Function + pg-based queue) — the dashboard already consumes progress via an event stream,
 which maps 1:1 to a Supabase Realtime channel on `scrape_runs`.

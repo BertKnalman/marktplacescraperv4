@@ -187,8 +187,7 @@ export default function Dashboard() {
               )}
             </Btn>
             <p className="text-center font-mono text-[10.5px] leading-relaxed text-fog-600">
-              polite delays {settings.request_delay_min}–{settings.request_delay_max}ms · concurrency {settings.concurrency} ·{" "}
-              {settings.demo_mode ? "demo engine" : "live engine"}
+              polite delays {settings.request_delay_min}–{settings.request_delay_max}ms · concurrency {settings.concurrency} · translation cache on
             </p>
           </div>
         </section>

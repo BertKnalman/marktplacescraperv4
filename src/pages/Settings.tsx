@@ -114,25 +114,20 @@ export default function Settings() {
               </Select>
             </Field>
           </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-ink-600/50 bg-ink-900/60 px-4 py-3.5">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3.5">
             <div>
-              <div className="text-[13.5px] font-bold text-fog-100">Demo mode <span className="font-mono text-[11px] text-fog-500">(SCRAPER_DEMO_MODE)</span></div>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-fog-500">
-                Deterministic fixture engine — perfect for testing. Disable for live capture via the serverless scraping endpoint.
+              <div className="text-[13.5px] font-bold text-amber-300">Built-in admin account</div>
+              <p className="mt-0.5 font-mono text-[11.5px] text-fog-400">
+                username <span className="text-fog-100">admin</span> · password <span className="text-fog-100">admin123</span>
               </p>
             </div>
-            <button
-              onClick={() => save({ demo_mode: !s.demo_mode }, s.demo_mode ? "Live engine enabled for next runs." : "Demo mode enabled.")}
-              className={`relative h-7 w-[52px] shrink-0 rounded-full border transition-all duration-200 ${s.demo_mode ? "border-amber-500/60 bg-amber-500/25" : "border-ok-500/60 bg-ok-500/20"}`}
-              role="switch"
-              aria-checked={s.demo_mode}
-            >
-              <span className={`absolute top-[3px] h-5 w-5 rounded-full transition-all duration-200 ${s.demo_mode ? "left-[26px] bg-amber-400" : "left-[3px] bg-ok-400"}`} />
-            </button>
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 font-mono text-[10.5px] font-bold uppercase tracking-widest text-amber-400">
+              active
+            </span>
           </div>
           <p className="mt-3 flex items-start gap-2 text-[11.5px] leading-relaxed text-fog-600">
             <IconShield size={13} className="mt-0.5 shrink-0 text-fog-500" />
-            The engine respects robots.txt in live mode, retries with exponential backoff and stops a source after repeated failures — other sources continue.
+            The engine retries with exponential backoff and stops a source after repeated failures — other sources continue unaffected.
           </p>
         </section>
 
