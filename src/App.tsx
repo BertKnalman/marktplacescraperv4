@@ -147,7 +147,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-4 font-mono text-[11px] text-fog-600">
           <span className="flex items-center gap-1.5"><IconRadar size={12} /> kijiji · olx · ricardo</span>
-          <span className="rounded-full border border-ink-600/60 px-2.5 py-0.5 uppercase tracking-wider">web build · zero local installs</span>
+          <span className="rounded-full border border-ink-600/60 px-2.5 py-0.5 uppercase tracking-wider">v2.0.1 · web build</span>
         </div>
       </div>
     </footer>

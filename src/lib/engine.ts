@@ -18,6 +18,9 @@ import { getScraper, MARKETPLACES } from "./scraper";
 import { getProvider } from "./translation";
 import { clamp, hashStr, mulberry32, rint, sleep, uuid } from "./util";
 
+// Version tag — forces cache bust on rebuild
+export const ENGINE_VERSION = "2.0.1";
+
 type Listener = (run: RunProgress | null) => void;
 
 let current: RunProgress | null = null;
