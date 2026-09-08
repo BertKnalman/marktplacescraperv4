@@ -74,39 +74,109 @@ src/
 supabase/migrations/001_init.sql   full schema + RLS policies + realtime
 ```
 
-## Deploy to production (Vercel + Supabase) — no local software needed
+## Deploy to Vercel (production)
 
-1. **Create a Supabase project** → copy URL + anon key.
-2. **Apply the SQL migration**: Supabase dashboard → SQL editor → paste `supabase/migrations/001_init.sql` → run.
-3. **Configure environment variables** on your hosting platform (see `.env.example`).
-   Keep `SUPABASE_SERVICE_ROLE_KEY` and `TRANSLATION_API_KEY` **server-only** (no `NEXT_PUBLIC_` prefix).
-4. **Connect the Git repository** to Vercel (or Cloudflare Pages) — build command `npm run build`.
-5. **Deploy.** Open the printed URL, create an account, start scraping.
+### Quick deploy (browser engine — works immediately)
 
-For live capture, host the scraper adapters as a serverless function (Next.js Route Handler `/api/scrape`); the
-adapters in `lib/scraper.ts` are transport-agnostic — swap the capture factory call for
-`fetch(buildSearchUrl(...))` → `extractListingFromHtml(html)`. Long jobs should run as queued background jobs
-(e.g. Supabase Edge Function + pg-based queue) — the dashboard already consumes progress via an event stream,
-which maps 1:1 to a Supabase Realtime channel on `scrape_runs`.
+1. **Push this repo to GitHub** (see "Zet het op GitHub" below)
+2. Go to [vercel.com](https://vercel.com) → **Add New → Project**
+3. Import your GitHub repository
+4. Vercel auto-detects Vite → click **Deploy**
+5. Open the generated URL (e.g. `https://marketplace-scraper.vercel.app`)
+6. Login with `admin` / `admin123` — start scraping immediately
+
+The browser engine runs the full pipeline client-side. No server setup needed.
+
+### Production deploy (with Supabase + live scraping)
+
+For multi-user production with persistent storage:
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com)
+   - Copy your **Project URL** and **anon key** from Settings → API
+
+2. **Apply the database schema**
+   - Go to Supabase dashboard → SQL Editor
+   - Paste the contents of `supabase/migrations/001_init.sql`
+   - Click **Run**
+
+3. **Configure Vercel environment variables**
+   - In your Vercel project → Settings → Environment Variables
+   - Add these (see `.env.example` for all options):
+     ```
+     NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+     SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # server-only!
+     ```
+   - Optional: Add `TRANSLATION_API_KEY` for DeepL/OpenAI translation
+
+4. **Redeploy**
+   - Vercel auto-deploys on every `git push`
+   - Or manually: Deployments → Latest → Redeploy
+
+5. **Test**
+   - Open your Vercel URL
+   - Login with `admin` / `admin123`
+   - Data now persists in Supabase PostgreSQL
+
+### Live scraping mode
+
+To switch from browser engine to server-side scraping:
+
+1. Create a Vercel serverless function at `api/scrape.ts`
+2. The adapters in `lib/scraper.ts` are transport-agnostic
+3. Replace the capture factory with:
+   ```typescript
+   const html = await fetch(buildSearchUrl(marketplace, params, page)).then(r => r.text());
+   const listings = extractListingFromHtml(html);
+   ```
+4. Long-running jobs should use Supabase Edge Functions or a queue system
+
+The dashboard already consumes progress via an event stream, which maps 1:1 to Supabase Realtime.
 
 ## Zet het op GitHub (± 2 minuten)
 
+### Optie A: Via terminal (aanbevolen)
+
 ```bash
 # 1. maak op github.com een lege repository aan (bijv. marketplace-scraper)
+#    NIET aanvinken: "Add README" / "Add .gitignore" — die heb je al
+
 # 2. in de projectmap:
 git init
 git add .
-git commit -m "Marketplace Scraper — complete web app"
+git commit -m "Marketplace Scraper v2.0.1 — complete web app"
 git branch -M main
 git remote add origin https://github.com/JOUW-GEBRUIKER/marketplace-scraper.git
 git push -u origin main
 ```
 
-Liever geen terminal? Op GitHub: **Add file → Upload files** en sleep de projectbestanden erin
-(`node_modules` en `dist` zijn al uitgesloten via `.gitignore`; secrets in `.env` verlaten nooit je machine).
+### Optie B: Via GitHub webinterface (geen terminal nodig)
 
-Daarna live: Vercel → *Add New → Project* → importeer de zojuist gepushte repo → **Deploy**.
-Je krijgt direct een publieke URL; elke volgende `git push` deployt automatisch opnieuw.
+1. Ga naar [github.com/new](https://github.com/new)
+2. Repository name: `marketplace-scraper`
+3. **NIET** aanvinken: "Add a README file" / "Add .gitignore"
+4. Klik **Create repository**
+5. Op de volgende pagina: **uploading an existing file** → sleep alle projectbestanden erin
+6. Klik **Commit changes**
+
+### Daarna live op Vercel
+
+1. Ga naar [vercel.com](https://vercel.com) → login met GitHub
+2. **Add New → Project** → importeer je `marketplace-scraper` repo
+3. Vercel detecteert automatisch: Framework = **Vite**, Build command = `npm run build`, Output = `dist`
+4. Klik **Deploy**
+5. Na ~30 seconden: je hebt een publieke URL (bijv. `https://marketplace-scraper.vercel.app`)
+
+**Elke volgende `git push` deployt automatisch opnieuw.**
+
+### Troubleshooting
+
+| Probleem | Oplossing |
+|----------|-----------|
+| Oude versie na deploy | Harde refresh: `Ctrl+Shift+R` / `Cmd+Shift+R` |
+| 404 op `/dashboard` | `vercel.json` is aanwezig → rewrites werken |
+| Login lukt niet | Wis localStorage: `localStorage.clear()` in console |
+| Build faalt op Vercel | Check Node versie (18+); `npm run build` lokaal testen |
 
 ## Ethics & compliance
 
