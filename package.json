@@ -1,5 +1,6 @@
 {
-  "name": "sandbox-workspace",
+  "name": "marketplace-scraper",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "scripts": {
